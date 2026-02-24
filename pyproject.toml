@@ -7,5 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "numpy>=2.4.2",
     "opencv-python>=4.13.0.92",
+    "pydantic>=2.12.5",
     "ultralytics>=8.4.14",
 ]
