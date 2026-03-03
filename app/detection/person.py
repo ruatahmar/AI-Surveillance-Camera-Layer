@@ -11,5 +11,5 @@ class PersonDetector:
         boxes = []
         for box in results.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            boxes.append({"bbox": (x1, y1, x2, y2), "conf": float(box.conf[0])})
+            boxes.append({"bbox": (x1, y1, x2, y2), "confidence": float(box.conf[0])})
         return boxes
