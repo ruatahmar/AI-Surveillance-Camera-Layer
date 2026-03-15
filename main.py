@@ -8,22 +8,28 @@ def main():
     stream = VideoStream(0)
     detector = PersonDetector()
     idcard_dector = IDCardDetector(model_path="data/models/best.pt", conf=0.1)
+
     try:
         while True:
-            frame = stream.read()
+            frame = stream.read()  # gets a frame
             if frame is None:
                 break
 
-            boxes = detector.detect(frame)
+            boxes = detector.detect(frame)  # detects all people in frame
 
-            # outlines the person in the vid
             for person in boxes:
-                x1, y1, x2, y2 = person["bbox"]
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                x1, y1, x2, y2 = person["bbox"]  # gets cords of person
+                cv2.rectangle(
+                    frame, (x1, y1), (x2, y2), (0, 255, 0), 2
+                )  # makes the rectangle frame
 
-                crop = frame[y1:y2, x1:x2]  # person cropped out
-                cv2.imshow("crop", crop)
-                label = idcard_dector.detect(crop)
+                crop = frame[
+                    y1:y2, x1:x2
+                ]  # person cropped out, we should maybe make this crop just the torso part ig
+                cv2.imshow("crop", crop)  # for testing/checking purpose
+                label = idcard_dector.detect(
+                    crop
+                )  # labeling the person (example; gavin = racist)
                 # puts the label on person
                 cv2.putText(
                     frame,
