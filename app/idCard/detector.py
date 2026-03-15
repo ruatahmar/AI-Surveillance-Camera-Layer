@@ -23,11 +23,11 @@ class IDCardDetector:
     def _classify_strap(self, id_crop):
         hsv = cv2.cvtColor(id_crop, cv2.COLOR_BGR2HSV)
 
-        green_mask = cv2.inRange(hsv, np.array([40, 50, 50]), np.array([80, 255, 255]))
+        green_mask = cv2.inRange(hsv, np.array([35, 50, 30]), np.array([85, 255, 255]))
 
         red_mask = cv2.inRange(
-            hsv, np.array([0, 50, 50]), np.array([10, 255, 255])
-        ) | cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+            hsv, np.array([0, 50, 30]), np.array([15, 255, 255])
+        ) | cv2.inRange(hsv, np.array([165, 50, 30]), np.array([180, 255, 255]))
 
         green_pixels = cv2.countNonZero(green_mask)
         red_pixels = cv2.countNonZero(red_mask)
