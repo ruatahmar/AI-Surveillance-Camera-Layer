@@ -1,2 +1,8 @@
 .venv
 .env
+
+runs/
+data/models/
+training/test/
+training/train/
+training/valid/

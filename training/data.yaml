@@ -1,0 +1,13 @@
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 1
+names: ["Card"]
+
+roboflow:
+  workspace: ruatas-workspace
+  project: id-card-detector-ahb2l-bzw2h
+  version: 1
+  license: MIT
+  url: https://universe.roboflow.com/ruatas-workspace/id-card-detector-ahb2l-bzw2h/dataset/1
