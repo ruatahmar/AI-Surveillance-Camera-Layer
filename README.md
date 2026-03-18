@@ -30,8 +30,11 @@ currently on step 3;
 - ive tried using [this](https://universe.roboflow.com/ruatas-workspace/id-card-detector-ahb2l-bzw2h/dataset/1), but it had no labels. always check if they have labels first before training, shit takes like 3 hrs
 - if you do get a good working dataset that helps detect, but like it still doesnt detect properly maybe change hsv values?
 
-# how shit works
-
 ---
 
 maybe we should add a OCR to find usn later
+
+# notes
+- we should consider a more sophisticated way to categorize student vs teacher if we're going down that route.
+- still need to find a dataset. i will try more tomorrow
+- switch to using argparse for parsing arguments but that's not a big deal and i can work on it

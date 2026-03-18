@@ -2,12 +2,12 @@ train: ../train/images
 val: ../valid/images
 test: ../test/images
 
-nc: 1
-names: ['Card']
+nc: 2
+names: ['with_card', 'without_card']
 
 roboflow:
-  workspace: ruatas-workspace
-  project: id-card-detector-ahb2l-bzw2h
+  workspace: id-card-a5nxx
+  project: id-card-0nqou
   version: 1
-  license: MIT
-  url: https://universe.roboflow.com/ruatas-workspace/id-card-detector-ahb2l-bzw2h/dataset/1
+  license: Private
+  url: https://app.roboflow.com/id-card-a5nxx/id-card-0nqou/1

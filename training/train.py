@@ -9,7 +9,7 @@ def main() -> None:
 
     _ = model.train(
         data=DATA_PATH,
-        epochs=100,
+        epochs=10,
         imgsz=640,
         project=PROJECT_PATH,
         name="id_card",
