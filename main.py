@@ -19,6 +19,8 @@ def main():
     # we should prolly have better argument parsing
     if len(sys.argv) == 2:
         stream.open(parse_source(sys.argv[1]))
+    else:
+        stream.open()
 
     detector: PersonDetector = PersonDetector()
     idcard_detector: IDCardDetector = IDCardDetector(model_path=MODEL_PATH, conf=0.1)
