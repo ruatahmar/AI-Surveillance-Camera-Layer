@@ -32,8 +32,6 @@ currently on step 3;
 
 # how shit works
 
-i commented tf out of shit mf fucking just look at the damn code stop buggin me every damn morning i have mad shit to do you piece of shit. if you have questions just drop them ill answer asyncly dumbahhhhhh. start from main.py
-
 ---
 
 maybe we should add a OCR to find usn later

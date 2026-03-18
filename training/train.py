@@ -1,14 +1,17 @@
-from ultralytics import YOLO
+from ultralytics.models.yolo import YOLO
+
+DATA_PATH = "training/data.yaml"
+PROJECT_PATH = "data/models"
 
 
-def main():
-    model = YOLO("yolov8n.pt")
+def main() -> None:
+    model: YOLO = YOLO("yolov8n.pt")
 
-    model.train(
-        data="training/data.yaml",
-        epochs=50,
+    _ = model.train(
+        data=DATA_PATH,
+        epochs=100,
         imgsz=640,
-        project="data/models",
+        project=PROJECT_PATH,
         name="id_card",
         exist_ok=True,
     )

@@ -2,8 +2,10 @@
 .env
 __pycache__
 
+*/__pycache__*/*
+
 runs/
-data/models/
+# data/models/
 training/test/
 training/train/
 training/valid/
