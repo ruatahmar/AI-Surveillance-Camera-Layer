@@ -3,11 +3,11 @@ val: ../valid/images
 test: ../test/images
 
 nc: 2
-names: ['with_card', 'without_card']
+names: ['Cards', 'Lanyard']
 
 roboflow:
-  workspace: id-card-a5nxx
-  project: id-card-0nqou
-  version: 1
-  license: Private
-  url: https://app.roboflow.com/id-card-a5nxx/id-card-0nqou/1
+  workspace: id-card-detection
+  project: id-card-detection-v1
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/id-card-detection/id-card-detection-v1/dataset/4
