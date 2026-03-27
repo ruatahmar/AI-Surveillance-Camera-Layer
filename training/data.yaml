@@ -1,13 +1,9 @@
-train: ../train/images
-val: ../valid/images
-test: ../test/images
+path: .
+train: images/train
+val: images/val
 
-nc: 2
-names: ['with_card', 'without_card']
-
-roboflow:
-  workspace: id-card-a5nxx
-  project: id-card-0nqou
-  version: 1
-  license: Private
-  url: https://app.roboflow.com/id-card-a5nxx/id-card-0nqou/1
+nc: 3
+names:
+  - Faculty
+  - Admin
+  - Student

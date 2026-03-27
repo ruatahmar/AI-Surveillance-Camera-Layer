@@ -3,6 +3,7 @@ import numpy as np
 from app.detection.video import VideoStream
 from app.detection.person import PersonDetector, PersonBox
 from app.idCard.detector import IDCardDetector
+from app.detection.crowd_detection import CrowdMonitor
 import sys
 
 MODEL_PATH = "data/models/best.pt"
@@ -23,6 +24,7 @@ def main():
         stream.open()
 
     detector: PersonDetector = PersonDetector()
+    monitor = CrowdMonitor()
     idcard_detector: IDCardDetector = IDCardDetector(model_path=MODEL_PATH, conf=0.1)
 
     try:
@@ -34,6 +36,10 @@ def main():
             boxes: list[PersonBox] = detector.detect(
                 frame
             )  # detects all people in frame
+            count = len(boxes)
+
+            if monitor.update(count):
+                print("ALERT: Loitering detected!")
 
             for person in boxes:
                 x1, y1, x2, y2 = person["bbox"]  # gets cords of person
