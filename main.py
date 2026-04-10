@@ -1,4 +1,11 @@
+import argparse
+import logging
+import threading
 import cv2
+import queue
+from pathlib import Path
+from app.core.config import Config
+from app.core.processor import VideoProcessor
 import numpy as np
 from app.detection.video import VideoStream
 from app.detection.person import PersonDetector, PersonBox
@@ -6,70 +13,98 @@ from app.idCard.detector import IDCardDetector
 from app.detection.crowd_detection import CrowdMonitor
 import sys
 
-MODEL_PATH = "data/models/best.pt"
-
-
-def parse_source(arg: str) -> str | int:
-    if arg.isdigit():
-        return int(arg)
-    return arg
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 def main():
-    stream: VideoStream = VideoStream()
-    # we should prolly have better argument parsing
-    if len(sys.argv) == 2:
-        stream.open(parse_source(sys.argv[1]))
-    else:
-        stream.open()
+    parser = argparse.ArgumentParser(description="AI Surveillance Camera Layer")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.toml",
+        help="Path to the TOML config file (default: config.toml)",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run without displaying video windows",
+    )
+    args = parser.parse_args()
 
+    config_path = Path(args.config)
+    if not config_path.exists():
+        logger.error(f"Config file not found: {args.config}")
+        return
     detector: PersonDetector = PersonDetector()
     monitor = CrowdMonitor()
     idcard_detector: IDCardDetector = IDCardDetector(model_path=MODEL_PATH, conf=0.1)
 
     try:
-        while True:
-            frame: np.ndarray | None = stream.read()  # gets a frame
-            if frame is None:
-                break
+        current_settings = Config.load_from_toml(config_path)
+        logger.info(f"Loaded config from {args.config}")
+    except Exception as e:
+        logger.error(f"Failed to load config: {e}")
+        return
 
-            boxes: list[PersonBox] = detector.detect(
-                frame
-            )  # detects all people in frame
-            count = len(boxes)
+    logger.info(f"Starting AI Surveillance Camera Layer (Headless: {args.headless})")
+    logger.info(f"Loaded config with {len(current_settings.sources)} sources")
 
-            if monitor.update(count):
-                print("ALERT: Loitering detected!")
+    # Shared queue for frames (main thread consumes, processor threads produce)
+    # We use a small maxsize to ensure we only show the latest frames
+    frame_queue = (
+        queue.Queue(maxsize=len(current_settings.sources) * 2)
+        if not args.headless
+        else None
+    )
 
-            for person in boxes:
-                x1, y1, x2, y2 = person["bbox"]  # gets cords of person
-                _ = cv2.rectangle(
-                    frame, (x1, y1), (x2, y2), (0, 255, 0), 2
-                )  # makes the rectangle frame
+    processors: list[VideoProcessor] = []
+    threads: list[threading.Thread] = []
 
-                crop: np.ndarray = frame[
-                    y1:y2, x1:x2
-                ]  # person cropped out, we should maybe make this crop just the torso part ig
-                cv2.imshow("crop", crop)  # for testing/checking purpose
-                label: str = idcard_detector.detect(crop)  # labeling the person
-                # puts the label on person
-                _ = cv2.putText(
-                    frame,
-                    label,
-                    (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 255, 0),
-                    2,
-                )
+    for source_config in current_settings.sources:
+        processor = VideoProcessor(
+            config=source_config,
+            model_path=current_settings.general.model_path,
+            conf_threshold=current_settings.general.conf_threshold,
+            frame_queue=frame_queue,
+        )
+        processors.append(processor)
 
-            # shows the frame of the vid
-            cv2.imshow("bruhtest", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+        thread = threading.Thread(target=processor.start, name=source_config.name)
+        thread.daemon = True
+        thread.start()
+        threads.append(thread)
+
+    try:
+        while any(t.is_alive() for t in threads):
+            if not args.headless and frame_queue is not None:
+                try:
+                    # Try to get a frame from any source
+                    source_name, frame = frame_queue.get(timeout=0.1)
+                    cv2.imshow(f"Source: {source_name}", frame)
+                except queue.Empty:
+                    pass
+
+                # Check for exit key in the main thread
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    logger.info("Exit requested via 'q' key")
+                    break
+            else:
+                # In headless mode, just wait
+                for t in threads:
+                    t.join(timeout=0.1)
+    except KeyboardInterrupt:
+        logger.info("Shutdown requested via KeyboardInterrupt")
     finally:
-        stream.release()
-        cv2.destroyAllWindows()
+        logger.info("Cleaning up...")
+        for processor in processors:
+            processor.stop()
+        if not args.headless:
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ runs/
 training/test/
 training/train/
 training/valid/
+config.toml
 training/images
 training/labels
 
