@@ -11,7 +11,8 @@ runs/
 training/test/
 training/train/
 training/valid/
-
+training/images
+training/labels
 
 
 frontend/.next
