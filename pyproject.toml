@@ -9,4 +9,5 @@ dependencies = [
     "opencv-python>=4.13.0.92",
     "pydantic>=2.12.5",
     "ultralytics>=8.4.14",
+    "requests>=2.32.3",
 ]

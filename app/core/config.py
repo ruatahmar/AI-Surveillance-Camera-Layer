@@ -15,12 +15,15 @@ class SourceConfig(BaseModel):
     name: str
     source: Union[int, str]
     loitering_enabled: bool = False
+    loitering_threshold: float | None = None  # Per-source override
     loitering_windows: list[LoiteringWindow] = Field(default_factory=list)
+    alert_limit_per_track: int = 1  # How many alerts of each type per person session
 
 
 class GeneralConfig(BaseModel):
     model_path: str = "data/models/best.pt"
     conf_threshold: float = 0.5
+    loitering_threshold: float = 10.0  # Global default
 
 
 class Config(BaseModel):

@@ -11,8 +11,8 @@ class IDCardDetector:
 
     def detect(self, person_crop: np.ndarray) -> str:
         """
-        Detects if a person is wearing an ID card.
-        Returns 'with_card', 'without_card', or 'no_id' if the detection fails.
+        Detects if a person is wearing an ID card or lanyard.
+        Returns 'Cards', 'Lanyard', or 'no_id' if the detection fails.
         """
         results = self.model(person_crop, conf=self.conf, verbose=False)
         if not results or len(results[0].boxes) == 0:
