@@ -1,9 +1,9 @@
-path: .
-train: images/train
-val: images/val
+train: ../train/images
+val: ../valid/images
+test: ../test/images
 
 nc: 2
-names: ["Cards", "Lanyard"]
+names: ['Cards', 'Lanyard']
 
 roboflow:
   workspace: id-card-detection

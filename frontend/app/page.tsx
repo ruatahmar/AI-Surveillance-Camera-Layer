@@ -53,13 +53,13 @@ export default function Dashboard() {
             accent="red"
           />
           <StatPill
-            label="Students"
-            value={alerts.filter((a) => a.label === "student").length}
-            accent="green"
+            label="Loitering"
+            value={alerts.filter((a) => a.label === "loitering").length}
+            accent="red"
           />
           <StatPill
-            label="Teachers"
-            value={alerts.filter((a) => a.label === "teacher").length}
+            label="Crowd"
+            value={alerts.filter((a) => a.label === "crowd").length}
             accent="blue"
           />
         </div>
@@ -109,15 +109,19 @@ function StatPill({
 function AlertCard({ alert }: { alert: Alert }) {
   const labelStyles: Record<string, string> = {
     no_id: "bg-red-500/10 text-red-400 border-red-500/20",
-    student: "bg-green-500/10 text-green-400 border-green-500/20",
-    teacher: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    loitering: "bg-red-500/10 text-red-400 border-red-500/20",
+    crowd: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    Cards: "bg-green-500/10 text-green-400 border-green-500/20",
+    Lanyard: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     unknown: "bg-white/5 text-white/40 border-white/10",
   };
 
   const labelText: Record<string, string> = {
     no_id: "No ID",
-    student: "Student",
-    teacher: "Teacher",
+    loitering: "Loitering",
+    crowd: "Crowd",
+    Cards: "Card Detected",
+    Lanyard: "Lanyard Detected",
     unknown: "Unknown",
   };
 

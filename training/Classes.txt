@@ -1,3 +1,2 @@
-Faculty
-Admin
-Student
+Cards
+Lanyard
