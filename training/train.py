@@ -14,6 +14,7 @@ def main() -> None:
         project=PROJECT_PATH,
         name="id_card",
         exist_ok=True,
+        device=0,
     )
 
 

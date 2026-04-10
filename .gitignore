@@ -1,5 +1,6 @@
 .venv
 .env
+node_modules/
 __pycache__
 .ruff_cache
 
@@ -11,3 +12,10 @@ training/test/
 training/train/
 training/valid/
 config.toml
+training/images
+training/labels
+
+
+frontend/.next
+frontend/node_modules
+frontend/next-env.d.ts
