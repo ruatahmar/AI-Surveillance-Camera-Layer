@@ -1,0 +1,30 @@
+[general]
+model_path = "data/models/best.pt"
+conf_threshold = 0.8
+loitering_threshold = 10.0  # Global default in seconds
+
+[[sources]]
+name = "Webcam"
+source = 0
+loitering_enabled = true
+loitering_threshold = 5.0   # Per-source override
+alert_limit_per_track = 5   # Max 5 alerts per person per session
+alert_cooldown = 10.0       # Min seconds between alerts for the same person
+process_every_n_frames = 3  # Only run detection every 3rd frame
+crowd_min_people = 5        # Min people to trigger crowd alert
+crowd_min_duration = 15.0   # Seconds crowd must persist before alert
+loitering_windows = [
+    { start = "18:00", end = "06:00" },
+    { start = "12:00", end = "13:00" }
+]
+
+# [[sources]]
+# name = "School CCTV (Test Video)"
+# source = "/home/gavinf/Downloads/test_video.mp4"
+# loitering_enabled = true
+# alert_limit_per_track = 2
+# loitering_windows = [
+#     { start = "00:00", end = "23:59" } # Active all day for testing
+# ]
+#
+

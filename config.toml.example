@@ -1,0 +1,28 @@
+[general]
+model_path = "data/models/best.pt"      # Path to YOLO ID card detection model
+conf_threshold = 0.8                     # YOLO confidence threshold for person detection
+loitering_threshold = 10.0              # Global default loitering threshold in seconds
+
+[[sources]]
+name = "Webcam"                          # Display name for this camera source
+source = 0                               # 0 for default webcam, or path to video file
+loitering_enabled = true                 # Enable loitering detection for this source
+loitering_threshold = 5.0               # Per-source override (overrides general setting)
+alert_limit_per_track = 5               # Max alerts per tracked person per session
+alert_cooldown = 10.0                    # Min seconds between alerts for the same person
+process_every_n_frames = 3              # Run detection every Nth frame (1 = every frame)
+crowd_min_people = 5                     # Min people count to trigger crowd alert
+crowd_min_duration = 15.0               # Seconds crowd must persist before alerting
+loitering_windows = [
+    { start = "18:00", end = "06:00" },  # Overnight window
+    { start = "12:00", end = "13:00" }   # Lunch hour window
+]
+
+# [[sources]]
+# name = "CCTV Feed"
+# source = "/path/to/video.mp4"
+# loitering_enabled = true
+# alert_limit_per_track = 2
+# loitering_windows = [
+#     { start = "00:00", end = "23:59" }  # Active all day
+# ]
