@@ -2,7 +2,7 @@ import time
 
 
 class CrowdMonitor:
-    def __init__(self, min_people: int = 1, min_duration: float = 15):
+    def __init__(self, min_people: int = 5, min_duration: float = 15):
         self.min_people = min_people
         self.min_duration = min_duration
 

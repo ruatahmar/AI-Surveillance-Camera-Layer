@@ -8,6 +8,7 @@ class LoiteringDetector:
         self.threshold = threshold
         self.person_timestamps = {}  # track_id -> first_seen_time
         self.alert_counts = {}       # track_id -> count of alerts sent
+        self.last_alert_time = {}    # track_id -> last alert timestamp
 
     def _is_in_window(self) -> bool:
         if not self.config.loitering_enabled:
@@ -39,6 +40,7 @@ class LoiteringDetector:
             # Reset tracking if we are not in a loitering window
             self.person_timestamps.clear()
             self.alert_counts.clear()
+            self.last_alert_time.clear()
             return triggered_alerts
 
         current_ids = set()
@@ -59,13 +61,19 @@ class LoiteringDetector:
             if self.alert_counts[tid] < self.config.alert_limit_per_track:
                 duration = now - self.person_timestamps[tid]
                 if duration >= self.threshold:
-                    triggered_alerts.append(tid)
-                    self.alert_counts[tid] += 1
+                    # Check cooldown: enough time since last alert for this track?
+                    last = self.last_alert_time.get(tid, 0.0)
+                    if (now - last) >= self.config.alert_cooldown:
+                        triggered_alerts.append(tid)
+                        self.alert_counts[tid] += 1
+                        self.last_alert_time[tid] = now
 
         # Clean up stale track IDs
         stale_ids = set(self.person_timestamps.keys()) - current_ids
         for sid in stale_ids:
             del self.person_timestamps[sid]
             del self.alert_counts[sid]
+            if sid in self.last_alert_time:
+                del self.last_alert_time[sid]
 
         return triggered_alerts

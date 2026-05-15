@@ -18,6 +18,10 @@ class SourceConfig(BaseModel):
     loitering_threshold: float | None = None  # Per-source override
     loitering_windows: list[LoiteringWindow] = Field(default_factory=list)
     alert_limit_per_track: int = 1  # How many alerts of each type per person session
+    alert_cooldown: float = 0.0  # Minimum seconds between alerts per track
+    process_every_n_frames: int = 1  # Process every Nth frame (1 = every frame)
+    crowd_min_people: int = 5  # Min people to trigger crowd alert
+    crowd_min_duration: float = 15.0  # Seconds crowd must persist before alert
 
 
 class GeneralConfig(BaseModel):

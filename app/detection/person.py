@@ -18,10 +18,10 @@ class PersonDetector:
         results = self.model.track(
             frame, persist=True, conf=self.conf, classes=[0], verbose=False
         )
-        if not results or results[0].boxes.id is None:
+        if not results or results[0].boxes is None or len(results[0].boxes) == 0 or results[0].boxes.id is None:
             # Fallback to normal detection if tracking IDs are not available
             results = self.model(frame, conf=self.conf, classes=[0], verbose=False)
-            if not results:
+            if not results or len(results[0].boxes) == 0:
                 return []
             
             boxes: list[PersonBox] = []

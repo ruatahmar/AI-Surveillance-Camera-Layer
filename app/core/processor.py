@@ -31,11 +31,15 @@ class VideoProcessor:
         threshold = config.loitering_threshold if config.loitering_threshold is not None else loitering_threshold
         self.loitering_detector = LoiteringDetector(config=config, threshold=threshold)
         
-        self.crowd_monitor = CrowdMonitor()
+        self.crowd_monitor = CrowdMonitor(
+            min_people=config.crowd_min_people,
+            min_duration=config.crowd_min_duration,
+        )
         self.is_running = False
         self.frame_queue = frame_queue
         # track_id -> count of no_id alerts sent
         self.alerted_no_id_counts = {}
+        self._frame_count = 0
 
     def start(self) -> None:
         try:
@@ -47,6 +51,7 @@ class VideoProcessor:
         self.is_running = True
         logger.info(f"Started processing source: {self.config.name}")
 
+        skip = self.config.process_every_n_frames
         try:
             while self.is_running:
                 frame = self.stream.read()
@@ -54,8 +59,13 @@ class VideoProcessor:
                     logger.warning(f"No frame from source: {self.config.name}")
                     break
 
-                # Process the frame
-                processed_frame = self.process_frame(frame)
+                self._frame_count += 1
+                should_process = (self._frame_count % skip == 0)
+
+                if should_process:
+                    processed_frame = self.process_frame(frame)
+                else:
+                    processed_frame = frame
 
                 # Send frame to UI queue if provided
                 if self.frame_queue is not None:
