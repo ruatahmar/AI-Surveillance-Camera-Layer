@@ -14,6 +14,10 @@ class PersonDetector:
         self.model: YOLO = YOLO(model_path)
         self.conf: float = conf
 
+    def reset_tracker(self) -> None:
+        if hasattr(self.model, "predictor") and self.model.predictor is not None:
+            self.model.predictor.trackers = None
+
     def detect(self, frame: np.ndarray) -> list[PersonBox]:
         results = self.model.track(
             frame, persist=True, conf=self.conf, classes=[0], verbose=False

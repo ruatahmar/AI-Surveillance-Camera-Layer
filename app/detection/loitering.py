@@ -30,6 +30,11 @@ class LoiteringDetector:
                 continue
         return False
 
+    def reset(self) -> None:
+        self.person_timestamps.clear()
+        self.alert_counts.clear()
+        self.last_alert_time.clear()
+
     def update(self, tracked_people: list) -> list[int]:
         """
         Updates tracking and returns list of track_ids that triggered a new loitering alert.
