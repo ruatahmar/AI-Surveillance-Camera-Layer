@@ -7,7 +7,6 @@ from pathlib import Path
 from app.core.config import Config
 from app.core.processor import VideoProcessor
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -15,7 +14,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
+    args = _parse_args()
+    settings = _load_config(args.config)
+    if settings is None:
+        return
+
+    frame_queue = _create_queue(settings, args.headless)
+    processors, threads = _start_processors(settings, frame_queue)
+
+    try:
+        if args.headless:
+            _headless_wait(threads)
+        else:
+            _display_loop(frame_queue, threads)
+    except KeyboardInterrupt:
+        logger.info("Shutdown requested via KeyboardInterrupt")
+    finally:
+        _cleanup(processors, not args.headless)
+
+
+def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="AI Surveillance Camera Layer")
     parser.add_argument(
         "--config",
@@ -28,40 +47,42 @@ def main():
         action="store_true",
         help="Run without displaying video windows",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    config_path = Path(args.config)
+
+def _load_config(config_path_str: str) -> Config | None:
+    config_path = Path(config_path_str)
     if not config_path.exists():
-        logger.error(f"Config file not found: {args.config}")
-        return
-
+        logger.error(f"Config file not found: {config_path_str}")
+        return None
     try:
-        current_settings = Config.load_from_toml(config_path)
-        logger.info(f"Loaded config from {args.config}")
+        settings = Config.load_from_toml(config_path)
+        logger.info(f"Loaded config from {config_path_str}")
+        logger.info(f"Loaded config with {len(settings.sources)} sources")
+        return settings
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
-        return
+        return None
 
-    logger.info(f"Starting AI Surveillance Camera Layer (Headless: {args.headless})")
-    logger.info(f"Loaded config with {len(current_settings.sources)} sources")
 
-    # Shared queue for frames (main thread consumes, processor threads produce)
-    # We use a small maxsize to ensure we only show the latest frames
-    frame_queue = (
-        queue.Queue(maxsize=len(current_settings.sources) * 2)
-        if not args.headless
-        else None
-    )
+def _create_queue(settings: Config, headless: bool) -> queue.Queue | None:
+    if headless:
+        return None
+    return queue.Queue(maxsize=len(settings.sources) * 2)
 
+
+def _start_processors(
+    settings: Config, frame_queue: queue.Queue | None
+) -> tuple[list[VideoProcessor], list[threading.Thread]]:
     processors: list[VideoProcessor] = []
     threads: list[threading.Thread] = []
 
-    for source_config in current_settings.sources:
+    for source_config in settings.sources:
         processor = VideoProcessor(
             config=source_config,
-            model_path=current_settings.general.model_path,
-            conf_threshold=current_settings.general.conf_threshold,
-            loitering_threshold=current_settings.general.loitering_threshold,
+            model_path=settings.general.model_path,
+            conf_threshold=settings.general.conf_threshold,
+            loitering_threshold=settings.general.loitering_threshold,
             frame_queue=frame_queue,
         )
         processors.append(processor)
@@ -71,32 +92,36 @@ def main():
         thread.start()
         threads.append(thread)
 
-    try:
-        while any(t.is_alive() for t in threads):
-            if not args.headless and frame_queue is not None:
-                try:
-                    # Try to get a frame from any source
-                    source_name, frame = frame_queue.get(timeout=0.1)
-                    cv2.imshow(f"Source: {source_name}", frame)
-                except queue.Empty:
-                    pass
+    return processors, threads
 
-                # Check for exit key in the main thread
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    logger.info("Exit requested via 'q' key")
-                    break
-            else:
-                # In headless mode, just wait
-                for t in threads:
-                    t.join(timeout=0.1)
-    except KeyboardInterrupt:
-        logger.info("Shutdown requested via KeyboardInterrupt")
-    finally:
-        logger.info("Cleaning up...")
-        for processor in processors:
-            processor.stop()
-        if not args.headless:
-            cv2.destroyAllWindows()
+
+def _display_loop(
+    frame_queue: queue.Queue, threads: list[threading.Thread]
+) -> None:
+    while any(t.is_alive() for t in threads):
+        try:
+            source_name, frame = frame_queue.get(timeout=0.1)
+            cv2.imshow(f"Source: {source_name}", frame)
+        except queue.Empty:
+            pass
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            logger.info("Exit requested via 'q' key")
+            break
+
+
+def _headless_wait(threads: list[threading.Thread]) -> None:
+    while any(t.is_alive() for t in threads):
+        for t in threads:
+            t.join(timeout=0.1)
+
+
+def _cleanup(processors: list[VideoProcessor], has_display: bool) -> None:
+    logger.info("Cleaning up...")
+    for processor in processors:
+        processor.stop()
+    if has_display:
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

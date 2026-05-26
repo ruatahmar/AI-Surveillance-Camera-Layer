@@ -1,6 +1,6 @@
 [general]
 model_path = "data/models/best.pt"
-conf_threshold = 0.8
+conf_threshold = 0.5
 loitering_threshold = 10.0  # Global default in seconds
 
 [[sources]]
@@ -8,9 +8,11 @@ name = "Webcam"
 source = 0
 loitering_enabled = true
 loitering_threshold = 5.0   # Per-source override
-alert_limit_per_track = 5   # Max 5 alerts per person per session
-alert_cooldown = 10.0       # Min seconds between alerts for the same person
-process_every_n_frames = 3  # Only run detection every 3rd frame
+loitering_alert_limit = 1   # Max loitering alerts per person (1 = once only)
+alert_limit_per_track = 5   # Max 5 no_id alerts per person per session
+alert_cooldown = 60.0       # Min seconds between no_id alerts for the same position
+no_id_alert_distance = 150  # Max pixel distance to treat as same person for no_id dedup
+process_every_n_frames = 5  # Only run detection every 5th frame
 tracker_reset_interval = 0  # Seconds between tracker resets (0 = never)
 crowd_min_people = 5        # Min people to trigger crowd alert
 crowd_min_duration = 15.0   # Seconds crowd must persist before alert
