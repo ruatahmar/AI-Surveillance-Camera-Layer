@@ -1,12 +1,16 @@
+import os
 import time
 import logging
+from pathlib import Path
 from queue import Queue
+import cv2
 import numpy as np
 from app.detection.video import VideoStream
 from app.detection.person import PersonDetector
 from app.idCard.detector import IDCardDetector
 from app.detection.loitering import LoiteringDetector
 from app.detection.crowd_detection import CrowdMonitor
+from app.detection.lanyard_checker import compute_green_mask, green_pixel_ratio, is_green_lanyard
 from app.core.config import SourceConfig
 from app.utils.alerts import send_alert
 from app.utils.drawing import draw_people
@@ -38,9 +42,16 @@ class VideoProcessor:
         self.is_running = False
         self.frame_queue = frame_queue
         self._recent_no_id_alerts: list[tuple[float, float, float]] = []
+        self._alert_counts: dict[int, int] = {}
         self._last_people: list[dict] = []
         self._frame_count = 0
         self._last_reset_time = time.time()
+        self._debug = os.getenv("APP_ENV") == "dev"
+        self._debug_dir = Path("debug")
+        self._debug_save_count = 0
+        self._debug_save_max = 20
+        self._debug_frame_interval = 3  # save every N processed frames
+        self._last_debug_save_frame = 0
 
     def start(self) -> None:
         if not self._open_stream():
@@ -70,7 +81,30 @@ class VideoProcessor:
         self._label_people(frame, people)
         self._handle_alerts(people, frame)
         self._annotate_and_cache(frame, people)
+        self._save_debug_frame(frame, people)
         return frame
+
+    def _save_debug_frame(self, frame: np.ndarray, people: list) -> None:
+        if not self._debug:
+            return
+        if self._debug_save_count >= self._debug_save_max:
+            return
+        if self._frame_count - self._last_debug_save_frame < self._debug_frame_interval:
+            return
+
+        has_lanyard = any(
+            p.get("id_label") == "Lanyard" for p in people
+        )
+        if not has_lanyard:
+            return
+
+        self._debug_dir.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        path = self._debug_dir / f"frame_{ts}_{self._frame_count:06d}.jpg"
+        cv2.imwrite(str(path), frame)
+        self._debug_save_count += 1
+        self._last_debug_save_frame = self._frame_count
+        logger.debug("Saved debug frame %s", path)
 
     def stop(self) -> None:
         self.is_running = False
@@ -110,6 +144,7 @@ class VideoProcessor:
         self.detector.reset_tracker()
         self._last_people = []
         self._recent_no_id_alerts.clear()
+        self._alert_counts.clear()
         self.loitering_detector.reset()
         self._last_reset_time = now
 
@@ -132,12 +167,48 @@ class VideoProcessor:
             if crop.size == 0:
                 person["label"] = "person"
                 continue
-            person["label"] = self.id_detector.detect(crop)
+
+            result = self.id_detector.detect(crop)
+            label = result["label"]
+            id_bbox = result["bbox"]
+            id_conf = result.get("confidence")
+
+            if self._debug:
+                person["id_label"] = label
+                person["id_conf"] = id_conf
+
+            if label == "Cards":
+                person["label"] = "person"
+            elif label == "no_id":
+                person["label"] = "no_id"
+            elif label == "Lanyard" and id_bbox is not None and self.config.green_lanyard_enabled:
+                lx1, ly1, lx2, ly2 = id_bbox
+                strap_crop = crop[ly1:ly2, lx1:lx2]
+                if strap_crop.size > 0:
+                    ratio = green_pixel_ratio(strap_crop)
+                    is_green = ratio > self.config.lanyard_green_threshold
+                    if self._debug:
+                        person["green_ratio"] = ratio
+                        mask = compute_green_mask(strap_crop)
+                        person["green_mask_overlay"] = (mask, x1 + lx1, y1 + ly1)
+                    logger.info(
+                        "lanyard=%s strap_crop=%s green_ratio=%.3f threshold=%.2f",
+                        self.config.name, strap_crop.shape, ratio,
+                        self.config.lanyard_green_threshold,
+                    )
+                    if is_green:
+                        person["label"] = "green_lanyard"
+                    else:
+                        person["label"] = "wrong_lanyard"
+                else:
+                    person["label"] = "wrong_lanyard"
+            else:
+                person["label"] = label
 
     def _handle_alerts(self, people: list, frame: np.ndarray) -> None:
         self._handle_loitering(people, frame)
         self._handle_crowd(people, frame)
-        self._handle_no_id(people, frame)
+        self._handle_id_alerts(people, frame)
 
     def _handle_loitering(self, people: list, frame: np.ndarray) -> None:
         alerted_ids = self.loitering_detector.update(people)
@@ -148,10 +219,11 @@ class VideoProcessor:
         if self.crowd_monitor.update(len(people)):
             send_alert(self.config.name, "crowd", frame)
 
-    def _handle_no_id(self, people: list, frame: np.ndarray) -> None:
+    def _handle_id_alerts(self, people: list, frame: np.ndarray) -> None:
         now = time.time()
         timeout = self.config.alert_cooldown
         dist = self.config.no_id_alert_distance
+        confirm = self.config.alert_confirm_frames
 
         self._recent_no_id_alerts = [
             (cx, cy, ts)
@@ -159,8 +231,27 @@ class VideoProcessor:
             if now - ts < timeout
         ]
 
+        current_ids = set()
+
         for person in people:
-            if person.get("label") != "no_id":
+            tid = person.get("track_id")
+            if tid is None:
+                continue
+            current_ids.add(tid)
+
+            label = person.get("label")
+            if label == "no_id":
+                alert_type = "no_id"
+            elif label == "wrong_lanyard":
+                alert_type = "wrong_lanyard"
+            else:
+                self._alert_counts.pop(tid, None)
+                continue
+
+            count = self._alert_counts.get(tid, 0) + 1
+            self._alert_counts[tid] = count
+
+            if count < confirm:
                 continue
 
             x1, y1, x2, y2 = person["bbox"]
@@ -173,8 +264,13 @@ class VideoProcessor:
             if already:
                 continue
 
-            send_alert(self.config.name, "no_id", frame)
+            send_alert(self.config.name, alert_type, frame)
             self._recent_no_id_alerts.append((cx, cy, now))
+
+        # Reset counts for people no longer in frame
+        stale = [tid for tid in self._alert_counts if tid not in current_ids]
+        for tid in stale:
+            del self._alert_counts[tid]
 
     def _annotate_and_cache(self, frame: np.ndarray, people: list) -> None:
         draw_people(frame, people)

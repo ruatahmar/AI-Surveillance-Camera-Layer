@@ -9,18 +9,16 @@ class IDCardDetector:
         self.model: YOLO = YOLO(model_path)
         self.conf: float = conf
 
-    def detect(self, person_crop: np.ndarray) -> str:
-        """
-        Detects if a person is wearing an ID card or lanyard.
-        Returns 'Cards', 'Lanyard', or 'no_id' if the detection fails.
-        """
+    def detect(self, person_crop: np.ndarray) -> dict:
         results = self.model(person_crop, conf=self.conf, verbose=False)
         if not results or len(results[0].boxes) == 0:
-            return "no_id"
+            return {"label": "no_id", "bbox": None, "confidence": 0.0}
 
-        # Get the detection with the highest confidence (with_card vs without_card)
         box = max(results[0].boxes, key=lambda b: float(b.conf[0]))
         class_id = int(box.cls[0])
-
-        # Return 'with_card' or 'without_card'
-        return self.model.names[class_id]
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        return {
+            "label": self.model.names[class_id],
+            "bbox": (x1, y1, x2, y2),
+            "confidence": float(box.conf[0]),
+        }

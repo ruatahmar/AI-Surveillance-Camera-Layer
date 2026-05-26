@@ -21,10 +21,13 @@ class SourceConfig(BaseModel):
     alert_limit_per_track: int = 1  # Max no_id alerts per person per session
     alert_cooldown: float = 30.0  # Minimum seconds between no_id alerts for same position
     no_id_alert_distance: int = 150  # Max pixel distance between bbox centers to treat as same person
+    alert_confirm_frames: int = 3  # Consecutive flagged frames needed before sending alert
     process_every_n_frames: int = 1  # Process every Nth frame (1 = every frame)
     tracker_reset_interval: int = 0  # Seconds between tracker resets (0 = never)
     crowd_min_people: int = 5  # Min people to trigger crowd alert
     crowd_min_duration: float = 15.0  # Seconds crowd must persist before alert
+    green_lanyard_enabled: bool = False  # Enable green lanyard color check
+    lanyard_green_threshold: float = 0.08  # Min green pixel ratio for lanyard
 
 
 class GeneralConfig(BaseModel):
