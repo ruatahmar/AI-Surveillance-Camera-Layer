@@ -50,7 +50,7 @@ class VideoProcessor:
         self._debug_dir = Path("debug")
         self._debug_save_count = 0
         self._debug_save_max = 20
-        self._debug_frame_interval = 3  # save every N processed frames
+        self._debug_frame_interval = 3
         self._last_debug_save_frame = 0
 
     def start(self) -> None:
@@ -267,10 +267,32 @@ class VideoProcessor:
             send_alert(self.config.name, alert_type, frame)
             self._recent_no_id_alerts.append((cx, cy, now))
 
-        # Reset counts for people no longer in frame
         stale = [tid for tid in self._alert_counts if tid not in current_ids]
         for tid in stale:
             del self._alert_counts[tid]
+
+    def apply_tunable(self, source_config: SourceConfig, general_conf_threshold: float | None = None, general_loitering_threshold: float | None = None) -> None:
+        """Apply tunable config changes in-place without restarting the processor."""
+        self.config = source_config
+
+        # Update detector confidence threshold
+        if general_conf_threshold is not None:
+            self.detector.model.conf = general_conf_threshold
+
+        # Update loitering threshold
+        effective_threshold = (
+            source_config.loitering_threshold
+            if source_config.loitering_threshold is not None
+            else (general_loitering_threshold or self.loitering_detector.threshold)
+        )
+        self.loitering_detector.threshold = effective_threshold
+        self.loitering_detector.config = source_config
+
+        # Update crowd monitor params
+        self.crowd_monitor.min_people = source_config.crowd_min_people
+        self.crowd_monitor.min_duration = source_config.crowd_min_duration
+
+        logger.info("Applied tunable config update to source: %s", source_config.name)
 
     def _annotate_and_cache(self, frame: np.ndarray, people: list) -> None:
         draw_people(frame, people)

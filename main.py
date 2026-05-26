@@ -4,7 +4,8 @@ import threading
 import cv2
 import queue
 from pathlib import Path
-from app.core.config import Config
+from app.core.config import Config, ConfigDiff
+from app.core.config_watcher import ConfigWatcher
 from app.core.processor import VideoProcessor
 
 logging.basicConfig(
@@ -23,6 +24,10 @@ def main() -> None:
     frame_queue = _create_queue(settings, args.headless)
     processors, threads = _start_processors(settings, frame_queue)
 
+    watcher = ConfigWatcher(config_path=args.config)
+    watcher.register(_make_on_config_change(processors))
+    watcher.start(settings)
+
     try:
         if args.headless:
             _headless_wait(threads)
@@ -31,7 +36,46 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Shutdown requested via KeyboardInterrupt")
     finally:
+        watcher.stop()
         _cleanup(processors, not args.headless)
+
+
+def _make_on_config_change(
+    processors: list[VideoProcessor],
+) -> object:
+    def on_config_change(new_config: Config, diff: ConfigDiff) -> None:
+        if diff.restart_required:
+            for reason in diff.restart_required:
+                logger.warning("Restart required for change to take effect: %s", reason)
+
+        if not diff.tunable:
+            return
+
+        # Apply general tunable changes
+        general_tunable = diff.tunable.get("__general__", {})
+        new_conf_threshold = general_tunable.get("conf_threshold")
+        new_loitering_threshold = general_tunable.get("loitering_threshold")
+
+        # Index new sources by name for fast lookup
+        new_sources = {s.name: s for s in new_config.sources}
+
+        for processor in processors:
+            name = processor.config.name
+            if name not in new_sources:
+                continue
+
+            # Only call apply_tunable if this source or general tunables changed
+            has_source_changes = name in diff.tunable
+            has_general_changes = bool(general_tunable)
+
+            if has_source_changes or has_general_changes:
+                processor.apply_tunable(
+                    source_config=new_sources[name],
+                    general_conf_threshold=new_conf_threshold,
+                    general_loitering_threshold=new_loitering_threshold,
+                )
+
+    return on_config_change
 
 
 def _parse_args() -> argparse.Namespace:
