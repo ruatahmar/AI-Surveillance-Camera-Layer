@@ -12,10 +12,13 @@ loitering_alert_limit = 1   # Max loitering alerts per person (1 = once only)
 alert_limit_per_track = 5   # Max 5 no_id alerts per person per session
 alert_cooldown = 60.0       # Min seconds between no_id alerts for the same position
 no_id_alert_distance = 150  # Max pixel distance to treat as same person for no_id dedup
+alert_confirm_frames = 3    # Consecutive flagged frames needed before alerting
 process_every_n_frames = 5  # Only run detection every 5th frame
 tracker_reset_interval = 0  # Seconds between tracker resets (0 = never)
 crowd_min_people = 5        # Min people to trigger crowd alert
 crowd_min_duration = 15.0   # Seconds crowd must persist before alert
+green_lanyard_enabled = true # Enable green lanyard color check
+lanyard_green_threshold = 0.05 # Min green pixel ratio for lanyard (Low values are generally preferred)
 loitering_windows = [
     { start = "18:00", end = "06:00" },
     { start = "12:00", end = "13:00" }
