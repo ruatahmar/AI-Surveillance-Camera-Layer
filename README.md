@@ -1,40 +1,92 @@
 # AI-Surveillance-Camera-Layer
 
-AI based monitoring using surveillance camera
+AI-based monitoring using surveillance cameras. Detects people, loitering, crowd formation, and ID card presence in real-time.
 
-## workflow
+## Architecture
 
 ```
-Camera
-  1. grab frame from video source (video.py)
-  2. run YOLO on full frame → get list of person bounding boxes (person.py)
-  3. for each person box:
-      → crop that region out of the frame
-      → run ID card detector on the crop
-      → label that person
-  4. draw all boxes + labels onto the frame (drawing.py)
-  5. display the annotated frame
-  6. repeat
+Camera Source
+  → YOLO person detection + tracking (person.py)
+    → Loitering detection (loitering.py)
+    → Crowd monitoring (crowd_detection.py)
+    → Per-person crop → ID card classification (idCard/detector.py)
+  → Annotated frame displayed locally / alert sent to frontend
 ```
 
-This loop runs ~30 times per second (one per frame).
+Alerts (loitering, crowd, no_id) are POSTed to the Next.js frontend as base64-encoded JPEGs.
 
-Also everything is called from main.py.
+## Prerequisites
 
-currently on step 3;
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) or pip
+- Node.js 18+ (for frontend)
+- A YOLO model file (see config)
 
-# immediate needs
+## Setup
 
-- basically do this
-- need to find better datasets for id card, so we can actually train yolo to detect them. i think this is most of the work left
-- ive tried using [this](https://universe.roboflow.com/ruatas-workspace/id-card-detector-ahb2l-bzw2h/dataset/1), but it had no labels. always check if they have labels first before training, shit takes like 3 hrs
-- if you do get a good working dataset that helps detect, but like it still doesnt detect properly maybe change hsv values?
+### Backend
 
----
+```bash
+# Clone and enter the repo
+git clone <repo-url>
+cd AI-Surveillance-Camera-Layer
 
-maybe we should add a OCR to find usn later
+# Create a virtual environment and install dependencies
+uv sync
+# or: pip install -e .
 
-# notes
-- we should consider a more sophisticated way to categorize student vs teacher if we're going down that route.
-- still need to find a dataset. i will try more tomorrow
-- switch to using argparse for parsing arguments but that's not a big deal and i can work on it
+# Copy the example config and edit to your needs
+cp config.toml.example config.toml
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+## Configuration
+
+See `config.toml.example` for all available settings.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `model_path` | `data/models/best.pt` | Path to YOLO ID card detection model |
+| `conf_threshold` | `0.5` | YOLO confidence threshold for person detection |
+| `loitering_threshold` | `10.0` | Seconds a person must remain before loitering alert |
+| `loitering_enabled` | `false` | Enable loitering detection per source |
+| `alert_limit_per_track` | `1` | Max alerts per tracked person per session |
+| `alert_cooldown` | `0.0` | Min seconds between alerts for the same person |
+| `process_every_n_frames` | `1` | Run detection every Nth frame (3 = ~10 fps at 30 fps source) |
+| `crowd_min_people` | `5` | Min people to trigger crowd alert |
+| `crowd_min_duration` | `15.0` | Seconds crowd count must persist before alerting |
+
+## Running Locally
+
+### Backend
+
+```bash
+# With display windows (requires GUI)
+python main.py
+
+# Headless mode (no display)
+python main.py --headless
+
+# Custom config path
+python main.py --config /path/to/config.toml
+```
+
+### Frontend (alert dashboard)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:3000` to see the alert feed. The frontend polls the backend every 3 seconds for new alerts.
+
+## Modes
+
+- **Normal mode**: Displays annotated camera windows with `cv2.imshow()`. Press `q` to quit.
+- **Headless mode** (`--headless`): Runs detection without GUI windows. Useful for servers or background deployment.

@@ -5,13 +5,15 @@ __pycache__
 .ruff_cache
 
 */__pycache__*/*
+*.pyc
 
 runs/
 # data/models/
 training/test/
 training/train/
 training/valid/
-config.toml
+# config.toml
+# config.toml.example
 training/images
 training/labels
 
