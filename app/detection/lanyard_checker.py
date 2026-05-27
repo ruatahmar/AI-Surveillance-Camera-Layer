@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-LOWER_GREEN = np.array([20, 20, 20])
+LOWER_GREEN = np.array([15, 10, 10])
 UPPER_GREEN = np.array([100, 255, 255])
 
 
@@ -14,7 +14,7 @@ def compute_green_mask(crop: np.ndarray) -> np.ndarray:
     hsv_green = cv2.inRange(hsv, LOWER_GREEN, UPPER_GREEN)
 
     b, g, r = cv2.split(crop.astype(np.float32))
-    rgb_green = (g > r * 1.05) & (g > b * 1.05)
+    rgb_green = (g >= r) & (g >= b)
     rgb_green = rgb_green.astype(np.uint8) * 255
 
     green_mask = cv2.bitwise_or(hsv_green, rgb_green)

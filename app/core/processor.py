@@ -244,6 +244,8 @@ class VideoProcessor:
                 alert_type = "no_id"
             elif label == "wrong_lanyard":
                 alert_type = "wrong_lanyard"
+            elif label == "green_lanyard":
+                alert_type = "green_lanyard"
             else:
                 self._alert_counts.pop(tid, None)
                 continue

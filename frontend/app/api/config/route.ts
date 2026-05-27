@@ -54,11 +54,41 @@ export async function GET() {
   }
 }
 
+function mergeSources(
+  current: Record<string, unknown>,
+  patch: Record<string, unknown>
+): Array<Record<string, unknown>> {
+  const currentSources = (current.sources ?? []) as Array<Record<string, unknown>>;
+  const patchSources = patch.sources as Array<Record<string, unknown>> | undefined;
+  if (!patchSources) return currentSources;
+
+  const sourceMap = new Map<string, Record<string, unknown>>();
+  for (const src of currentSources) {
+    sourceMap.set(src.name as string, { ...src });
+  }
+  for (const src of patchSources) {
+    const name = src.name as string;
+    if (sourceMap.has(name)) {
+      // Only overwrite fields present in the patch source
+      sourceMap.set(name, { ...sourceMap.get(name)!, ...src });
+    } else {
+      sourceMap.set(name, { ...src });
+    }
+  }
+  return Array.from(sourceMap.values());
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     const patch = await req.json();
     const current = readConfig();
-    const merged = deepMerge(current, patch);
+
+    // Merge everything except sources (deepMerge replaces arrays)
+    const { sources: _ps, ...restPatch } = patch;
+    const { sources: _cs, ...restCurrent } = current;
+    const merged = deepMerge(restCurrent, restPatch);
+    merged.sources = mergeSources(current, patch);
+
     const toml = stringify(merged);
     writeFileSync(getConfigPath(), toml, "utf-8");
     return NextResponse.json({ ok: true });

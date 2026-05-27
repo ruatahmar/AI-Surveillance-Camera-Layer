@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 CONFIG_PATH = Path("config.toml")
 
 TUNABLE_SOURCE_FIELDS = {
-    "conf_threshold",
     "loitering_enabled",
     "loitering_threshold",
     "loitering_windows",

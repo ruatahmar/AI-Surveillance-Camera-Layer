@@ -1,36 +1,29 @@
 [general]
 model_path = "data/models/best.pt"
 conf_threshold = 0.5
-loitering_threshold = 10.0  # Global default in seconds
+loitering_threshold = 10
 
 [[sources]]
 name = "Webcam"
 source = 0
 loitering_enabled = true
-loitering_threshold = 5.0   # Per-source override
-loitering_alert_limit = 1   # Max loitering alerts per person (1 = once only)
-alert_limit_per_track = 5   # Max 5 no_id alerts per person per session
-alert_cooldown = 60.0       # Min seconds between no_id alerts for the same position
-no_id_alert_distance = 150  # Max pixel distance to treat as same person for no_id dedup
-alert_confirm_frames = 3    # Consecutive flagged frames needed before alerting
-process_every_n_frames = 5  # Only run detection every 5th frame
-tracker_reset_interval = 0  # Seconds between tracker resets (0 = never)
-crowd_min_people = 5        # Min people to trigger crowd alert
-crowd_min_duration = 15.0   # Seconds crowd must persist before alert
-green_lanyard_enabled = true # Enable green lanyard color check
-lanyard_green_threshold = 0.05 # Min green pixel ratio for lanyard (Low values are generally preferred)
-loitering_windows = [
-    { start = "18:00", end = "06:00" },
-    { start = "12:00", end = "13:00" }
-]
+loitering_threshold = 5
+loitering_alert_limit = 1
+alert_limit_per_track = 5
+alert_cooldown = 60
+no_id_alert_distance = 150
+alert_confirm_frames = 3
+process_every_n_frames = 5
+tracker_reset_interval = 0
+crowd_min_people = 2
+crowd_min_duration = 33
+green_lanyard_enabled = true
+lanyard_green_threshold = 0.05
 
-# [[sources]]
-# name = "School CCTV (Test Video)"
-# source = "/home/gavinf/Downloads/test_video.mp4"
-# loitering_enabled = true
-# alert_limit_per_track = 2
-# loitering_windows = [
-#     { start = "00:00", end = "23:59" } # Active all day for testing
-# ]
-#
+[[sources.loitering_windows]]
+start = "18:00"
+end = "06:00"
 
+[[sources.loitering_windows]]
+start = "12:00"
+end = "13:00"
