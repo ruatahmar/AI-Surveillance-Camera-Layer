@@ -3,6 +3,15 @@ model_path = "data/models/best.pt"
 conf_threshold = 0.5
 loitering_threshold = 10
 
+[email]
+enabled = true
+to_addrs = [ "gavin.furtado12@gmail.com", "furtado.gavin12@gmail.com" ]
+alert_no_id = true
+alert_wrong_lanyard = true
+alert_green_lanyard = false
+alert_loitering = true
+alert_crowd = true
+
 [[sources]]
 name = "Webcam"
 source = 0

@@ -57,6 +57,16 @@ class GeneralConfig(BaseModel):
     loitering_threshold: float = 10.0
 
 
+class EmailConfig(BaseModel):
+    enabled: bool = False
+    to_addrs: list[str] = Field(default_factory=list)
+    alert_no_id: bool = True
+    alert_wrong_lanyard: bool = True
+    alert_green_lanyard: bool = False
+    alert_loitering: bool = True
+    alert_crowd: bool = True
+
+
 class ConfigDiff(BaseModel):
     tunable: dict[str, dict]  # source_name -> {field: new_value}
     restart_required: list[str]  # list of reasons
@@ -65,6 +75,7 @@ class ConfigDiff(BaseModel):
 class Config(BaseModel):
     general: GeneralConfig = GeneralConfig()
     sources: list[SourceConfig] = []
+    email: EmailConfig = EmailConfig()
 
     @classmethod
     def load_from_toml(cls, file_path: str | Path) -> "Config":

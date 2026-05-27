@@ -39,9 +39,20 @@ type GeneralConfig = {
     loitering_threshold: number;
 };
 
+type EmailConfig = {
+    enabled: boolean;
+    to_addrs: string[];
+    alert_no_id: boolean;
+    alert_wrong_lanyard: boolean;
+    alert_green_lanyard: boolean;
+    alert_loitering: boolean;
+    alert_crowd: boolean;
+};
+
 type Config = {
     general: GeneralConfig;
     sources: SourceConfig[];
+    email: EmailConfig;
 };
 
 export default function Dashboard() {
@@ -116,6 +127,12 @@ export default function Dashboard() {
     const updateGeneral = (field: keyof GeneralConfig, value: unknown) => {
         setEditedConfig((prev) =>
             prev ? { ...prev, general: { ...prev.general, [field]: value } } : prev
+        );
+    };
+
+    const updateEmail = (field: keyof EmailConfig, value: unknown) => {
+        setEditedConfig((prev) =>
+            prev ? { ...prev, email: { ...prev.email, [field]: value } as EmailConfig } : prev
         );
     };
 
@@ -207,6 +224,7 @@ export default function Dashboard() {
                     onSave={handleSave}
                     onUpdateGeneral={updateGeneral}
                     onUpdateSource={updateSource}
+                    onUpdateEmail={updateEmail}
                 />
             )}
         </main>
@@ -303,6 +321,7 @@ function SettingsModal({
     onSave,
     onUpdateGeneral,
     onUpdateSource,
+    onUpdateEmail,
 }: {
     config: Config | null;
     saving: boolean;
@@ -312,6 +331,7 @@ function SettingsModal({
     onSave: () => void;
     onUpdateGeneral: (field: keyof GeneralConfig, value: unknown) => void;
     onUpdateSource: (idx: number, field: keyof SourceConfig, value: unknown) => void;
+    onUpdateEmail: (field: keyof EmailConfig, value: unknown) => void;
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -382,6 +402,86 @@ function SettingsModal({
                             </div>
                         </section>
 
+                        {/* Email Notifications */}
+                        <section>
+                            <h3 className="text-xs uppercase tracking-widest text-white/30 mb-4">Email Notifications</h3>
+                            <div className="space-y-4">
+                                <SettingsField label="Enabled">
+                                    <SelectInput
+                                        value={config.email?.enabled ?? false}
+                                        onChange={(v) => onUpdateEmail("enabled", v)}
+                                    />
+                                </SettingsField>
+                                <SettingsField label="To Addresses">
+                                    <div className="space-y-1.5">
+                                        {(config.email?.to_addrs ?? []).map((addr, i) => (
+                                            <div key={i} className="flex gap-1.5">
+                                                <input
+                                                    type="text"
+                                                    value={addr}
+                                                    onChange={(e) => {
+                                                        const addrs = [...(config.email?.to_addrs ?? [])];
+                                                        addrs[i] = e.target.value;
+                                                        onUpdateEmail("to_addrs", addrs);
+                                                    }}
+                                                    placeholder="recipient@example.com"
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/30"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const addrs = (config.email?.to_addrs ?? []).filter((_, j) => j !== i);
+                                                        onUpdateEmail("to_addrs", addrs);
+                                                    }}
+                                                    className="px-2 text-xs text-red-400/60 hover:text-red-400"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => {
+                                                const addrs = [...(config.email?.to_addrs ?? []), ""];
+                                                onUpdateEmail("to_addrs", addrs);
+                                            }}
+                                            className="text-xs text-white/30 hover:text-white/60"
+                                        >
+                                            + Add address
+                                        </button>
+                                    </div>
+                                </SettingsField>
+                                <SettingsField label="Alert — No ID">
+                                    <SelectInput
+                                        value={config.email?.alert_no_id ?? true}
+                                        onChange={(v) => onUpdateEmail("alert_no_id", v)}
+                                    />
+                                </SettingsField>
+                                <SettingsField label="Alert — Wrong Lanyard">
+                                    <SelectInput
+                                        value={config.email?.alert_wrong_lanyard ?? true}
+                                        onChange={(v) => onUpdateEmail("alert_wrong_lanyard", v)}
+                                    />
+                                </SettingsField>
+                                <SettingsField label="Alert — Green Lanyard">
+                                    <SelectInput
+                                        value={config.email?.alert_green_lanyard ?? false}
+                                        onChange={(v) => onUpdateEmail("alert_green_lanyard", v)}
+                                    />
+                                </SettingsField>
+                                <SettingsField label="Alert — Loitering">
+                                    <SelectInput
+                                        value={config.email?.alert_loitering ?? true}
+                                        onChange={(v) => onUpdateEmail("alert_loitering", v)}
+                                    />
+                                </SettingsField>
+                                <SettingsField label="Alert — Crowd">
+                                    <SelectInput
+                                        value={config.email?.alert_crowd ?? true}
+                                        onChange={(v) => onUpdateEmail("alert_crowd", v)}
+                                    />
+                                </SettingsField>
+                            </div>
+                        </section>
+
                         {/* Per-source sections */}
                         {config.sources.map((src, idx) => (
                             <section key={src.name}>
@@ -402,7 +502,7 @@ function SettingsModal({
                                     </SettingsField>
 
                                     <SettingsField label="Loitering Enabled">
-                                        <Toggle
+                                        <SelectInput
                                             value={src.loitering_enabled}
                                             onChange={(v) => onUpdateSource(idx, "loitering_enabled", v)}
                                         />
@@ -490,7 +590,7 @@ function SettingsModal({
                                     </SettingsField>
 
                                     <SettingsField label="Green Lanyard Enabled">
-                                        <Toggle
+                                        <SelectInput
                                             value={src.green_lanyard_enabled}
                                             onChange={(v) => onUpdateSource(idx, "green_lanyard_enabled", v)}
                                         />
@@ -602,7 +702,7 @@ function NumberInput({
     );
 }
 
-function Toggle({
+function SelectInput({
     value,
     onChange,
 }: {
@@ -610,17 +710,13 @@ function Toggle({
     onChange: (v: boolean) => void;
 }) {
     return (
-        <div className="flex justify-end">
-            <button
-                onClick={() => onChange(!value)}
-                className={`relative w-10 h-6 rounded-full transition-colors ${value ? "bg-white" : "bg-white/10"
-                    }`}
-            >
-                <span
-                    className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${value ? "translate-x-5 bg-black" : "translate-x-1 bg-white/40"
-                        }`}
-                />
-            </button>
-        </div>
+        <select
+            value={value ? "true" : "false"}
+            onChange={(e) => onChange(e.target.value === "true")}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/30"
+        >
+            <option value="false">Off</option>
+            <option value="true">On</option>
+        </select>
     );
 }

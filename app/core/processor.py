@@ -11,9 +11,10 @@ from app.idCard.detector import IDCardDetector
 from app.detection.loitering import LoiteringDetector
 from app.detection.crowd_detection import CrowdMonitor
 from app.detection.lanyard_checker import compute_green_mask, green_pixel_ratio, is_green_lanyard
-from app.core.config import SourceConfig
+from app.core.config import SourceConfig, EmailConfig
 from app.utils.alerts import send_alert
 from app.utils.drawing import draw_people
+from app.notification.email import should_send_email, send_alert_email
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,10 @@ class VideoProcessor:
         conf_threshold: float,
         loitering_threshold: float,
         frame_queue: Queue | None = None,
+        email_config: EmailConfig | None = None,
     ) -> None:
         self.config = config
+        self.email_config = email_config or EmailConfig()
         self.stream = VideoStream()
         self.detector = PersonDetector(conf=conf_threshold)
         self.id_detector = IDCardDetector(model_path=model_path, conf=0.1)
@@ -191,11 +194,11 @@ class VideoProcessor:
                         person["green_ratio"] = ratio
                         mask = compute_green_mask(strap_crop)
                         person["green_mask_overlay"] = (mask, x1 + lx1, y1 + ly1)
-                    logger.info(
-                        "lanyard=%s strap_crop=%s green_ratio=%.3f threshold=%.2f",
-                        self.config.name, strap_crop.shape, ratio,
-                        self.config.lanyard_green_threshold,
-                    )
+                        logger.info(
+                            "lanyard=%s strap_crop=%s green_ratio=%.3f threshold=%.2f",
+                            self.config.name, strap_crop.shape, ratio,
+                            self.config.lanyard_green_threshold,
+                        )
                     if is_green:
                         person["label"] = "green_lanyard"
                     else:
@@ -210,14 +213,20 @@ class VideoProcessor:
         self._handle_crowd(people, frame)
         self._handle_id_alerts(people, frame)
 
+    def _maybe_email(self, alert_type: str) -> None:
+        if should_send_email(self.email_config, alert_type):
+            send_alert_email(self.email_config, self.config.name, alert_type)
+
     def _handle_loitering(self, people: list, frame: np.ndarray) -> None:
         alerted_ids = self.loitering_detector.update(people)
         if alerted_ids:
             send_alert(self.config.name, "loitering", frame)
+            self._maybe_email("loitering")
 
     def _handle_crowd(self, people: list, frame: np.ndarray) -> None:
         if self.crowd_monitor.update(len(people)):
             send_alert(self.config.name, "crowd", frame)
+            self._maybe_email("crowd")
 
     def _handle_id_alerts(self, people: list, frame: np.ndarray) -> None:
         now = time.time()
@@ -267,15 +276,18 @@ class VideoProcessor:
                 continue
 
             send_alert(self.config.name, alert_type, frame)
+            self._maybe_email(alert_type)
             self._recent_no_id_alerts.append((cx, cy, now))
 
         stale = [tid for tid in self._alert_counts if tid not in current_ids]
         for tid in stale:
             del self._alert_counts[tid]
 
-    def apply_tunable(self, source_config: SourceConfig, general_conf_threshold: float | None = None, general_loitering_threshold: float | None = None) -> None:
+    def apply_tunable(self, source_config: SourceConfig, general_conf_threshold: float | None = None, general_loitering_threshold: float | None = None, email_config: EmailConfig | None = None) -> None:
         """Apply tunable config changes in-place without restarting the processor."""
         self.config = source_config
+        if email_config is not None:
+            self.email_config = email_config
 
         # Update detector confidence threshold
         if general_conf_threshold is not None:

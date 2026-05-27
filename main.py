@@ -4,9 +4,12 @@ import threading
 import cv2
 import queue
 from pathlib import Path
+from dotenv import load_dotenv
 from app.core.config import Config, ConfigDiff
 from app.core.config_watcher import ConfigWatcher
 from app.core.processor import VideoProcessor
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,9 +51,6 @@ def _make_on_config_change(
             for reason in diff.restart_required:
                 logger.warning("Restart required for change to take effect: %s", reason)
 
-        if not diff.tunable:
-            return
-
         # Apply general tunable changes
         general_tunable = diff.tunable.get("__general__", {})
         new_conf_threshold = general_tunable.get("conf_threshold")
@@ -64,16 +64,12 @@ def _make_on_config_change(
             if name not in new_sources:
                 continue
 
-            # Only call apply_tunable if this source or general tunables changed
-            has_source_changes = name in diff.tunable
-            has_general_changes = bool(general_tunable)
-
-            if has_source_changes or has_general_changes:
-                processor.apply_tunable(
-                    source_config=new_sources[name],
-                    general_conf_threshold=new_conf_threshold,
-                    general_loitering_threshold=new_loitering_threshold,
-                )
+            processor.apply_tunable(
+                source_config=new_sources[name],
+                general_conf_threshold=new_conf_threshold,
+                general_loitering_threshold=new_loitering_threshold,
+                email_config=new_config.email,
+            )
 
     return on_config_change
 
@@ -128,6 +124,7 @@ def _start_processors(
             conf_threshold=settings.general.conf_threshold,
             loitering_threshold=settings.general.loitering_threshold,
             frame_queue=frame_queue,
+            email_config=settings.email,
         )
         processors.append(processor)
 
