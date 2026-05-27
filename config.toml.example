@@ -3,6 +3,15 @@ model_path = "data/models/best.pt"      # Path to YOLO ID card detection model
 conf_threshold = 0.8                     # YOLO confidence threshold for person detection
 loitering_threshold = 10.0              # Global default loitering threshold in seconds
 
+[email]
+enabled = false                          # Master toggle for email notifications
+to_addrs = [ "admin@example.com" ]      # Comma-separated recipient list
+alert_no_id = true                       # Send email on no-ID alerts
+alert_wrong_lanyard = true               # Send email on wrong lanyard alerts
+alert_green_lanyard = false              # Send email on green lanyard alerts
+alert_loitering = true                   # Send email on loitering alerts
+alert_crowd = true                       # Send email on crowd alerts
+
 [[sources]]
 name = "Webcam"                          # Display name for this camera source
 source = 0                               # 0 for default webcam, or path to video file
